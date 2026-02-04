@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SQL Transformer</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 850px; }
+        h1 { color: #1a73e8; margin-top: 0; border-bottom: 2px solid #eef; padding-bottom: 10px; font-size: 24px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; margin-top: 20px; }
+        textarea { width: 100%; height: 80px; padding: 12px; border: 2px solid #dfe1e5; border-radius: 8px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 14px; outline: none; }
+        button { border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; transition: 0.2s; }
+        .primary-btn { background-color: #1a73e8; color: white; width: 100%; margin: 15px 0; }
+        .final-btn { background-color: #f39c12; color: white; width: 100%; margin-top: 15px; }
+        .copy-btn { background-color: #28a745; color: white; width: 100%; margin-top: 10px; position: relative; }
+        .copy-success { background-color: #1557b0 !important; }
+        .clear-btn { background-color: #6c757d; color: white; padding: 6px 12px; font-size: 12px; }
+        .result-box { background: #ffffff; border: 2px solid #e1e4e8; padding: 20px; border-radius: 8px; margin-top: 5px; min-height: 50px; }
+        #output { white-space: pre-wrap; font-family: 'Consolas', monospace; color: #24292e; font-size: 14px; line-height: 1.6; }
+        .error-text { color: #d73a49 !important; font-weight: bold; }
+        #dynamicForm { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #d1d5da; margin-top: 15px; display: none; }
+        .form-group { margin-bottom: 12px; display: flex; align-items: center; }
+        .form-group label { margin: 0; width: 40%; font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; }
+        .form-group input { width: 60%; padding: 8px; border: 1px solid #ccd1d9; border-radius: 4px; }
+        #copyFeedback { text-align: center; color: #28a745; font-size: 14px; font-weight: bold; margin-top: 8px; height: 20px; visibility: hidden; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h1>SQL Transformer</h1>
+        <button class="clear-btn" onclick="clearAll()">Clear All</button>
+    </div>
+    <label>1. Input SELECT Statement:</label>
+    <textarea id="inputSql" placeholder="Example: select a.ad from siebel.abc a where a.id = 'qw';"></textarea>
+    <button class="primary-btn" onclick="prepareForm()">Prepare Update Values</button>
+
+    <div id="dynamicForm">
+        <label style="margin-top:0">2. Enter Values to Update:</label>
+        <div id="inputsContainer" style="margin-top:10px;"></div>
+        <button class="final-btn" onclick="generateFinalSql()">Generate Final Statement</button>
+    </div>
+    
+    <label>Resulting UPDATE Statement:</label>
+    <div class="result-box"><div id="output">Waiting...</div></div>
+    <button id="copyBtn" class="copy-btn" onclick="copyText()">Copy to Clipboard</button>
+    <div id="copyFeedback">✓ Copied to clipboard!</div>
+</div>
+
+<script>
+    let currentColumns = [];
+    let tables = {}; 
+    let joinInfo = null;
+    let primaryFilter = null;
+    let isJoinMode = false;
+
+    function stripAlias(str) {
+        if (!str) return "";
+        return str.includes('.') ? str.split('.').pop() : str;
+    }
+
+    function prepareForm() {
+        const input = document.getElementById('inputSql').value.trim().replace(/\s+/g, ' ');
+        const outputDiv = document.getElementById('output');
+        const formDiv = document.getElementById('dynamicForm');
+        const container = document.getElementById('inputsContainer');
+        
+        container.innerHTML = "";
+        formDiv.style.display = "none";
+        tables = {}; joinInfo = null; primaryFilter = null;
+
+        const colMatch = input.match(/select\s+(.*?)\s+from/i);
+        const whereMatch = input.match(/where\s+(.*)/i);
+        if (!colMatch || !whereMatch) {
+            outputDiv.innerHTML = "<span class='error-text'>❌ ERROR: Invalid Statement.</span>";
+            return;
+        }
+
+        const rawColumnsPart = colMatch[1].trim();
+        if (rawColumnsPart.includes("*")) {
+            outputDiv.innerHTML = "<span class='error-text'>❌ ERROR: 'SELECT *' detected.</span>";
+            return;
+        }
+
+        const fromPartMatch = input.match(/from\s+(.*?)\s+where/i);
+        const tablePart = fromPartMatch[1];
+        const tableRegex = /([\w\.]+)\s+([\w]+)/g;
+        let tMatch;
+        while ((tMatch = tableRegex.exec(tablePart)) !== null) {
+            const fullTableName = tMatch[1];
+            const alias = tMatch[2];
+            if(!['inner','join','on','left','right'].includes(fullTableName.toLowerCase())) {
+                tables[alias] = fullTableName; // Store the FULL name (siebel.abc)
+            }
+        }
+
+        isJoinMode = Object.keys(tables).length > 1;
+        currentColumns = rawColumnsPart.split(',').map(c => c.trim());
+
+        if (isJoinMode) {
+            const joinRegex = /([\w]+)\.([\w]+)\s*=\s*([\w]+)\.([\w]+)/;
+            const filterRegex = /([\w]+)\.([\w]+)\s*=\s*'([^']+)'/;
+            
+            const jMatch = input.match(joinRegex);
+            const fMatch = input.match(filterRegex);
+
+            if (jMatch && fMatch) {
+                primaryFilter = { alias: fMatch[1], col: fMatch[2], val: fMatch[3] };
+                if (jMatch[1] === primaryFilter.alias) {
+                    joinInfo = { pAlias: jMatch[1], pCol: jMatch[2], sAlias: jMatch[3], sCol: jMatch[4] };
+                } else {
+                    joinInfo = { pAlias: jMatch[3], pCol: jMatch[4], sAlias: jMatch[1], sCol: jMatch[2] };
+                }
+            }
+        } else {
+            const singleTableMatch = input.match(/from\s+([\w\.]+)/i);
+            const foundTable = singleTableMatch ? singleTableMatch[1] : 's_order';
+            const aliasMatch = input.match(/from\s+[\w\.]+\s+([\w]+)/i);
+            const foundAlias = aliasMatch ? aliasMatch[1] : 'SINGLE';
+            tables[foundAlias] = foundTable;
+            primaryFilter = { rawWhere: whereMatch[1].replace(';', '').trim() };
+        }
+
+        currentColumns.forEach(col => {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.innerHTML = `<label>${col}:</label><input type="text" id="val_${col}" placeholder="Value">`;
+            container.appendChild(div);
+        });
+
+        formDiv.style.display = "block";
+        outputDiv.innerText = "Form ready.";
+    }
+
+    function generateFinalSql() {
+        let finalSql = "";
+        const grouped = {};
+
+        currentColumns.forEach(col => {
+            const alias = col.includes('.') ? col.split('.')[0] : Object.keys(tables)[0];
+            if (!grouped[alias]) grouped[alias] = [];
+            grouped[alias].push(col);
+        });
+
+        for (const alias in grouped) {
+            const fullTableName = tables[alias];
+            const setClause = grouped[alias].map(col => {
+                const val = document.getElementById(`val_${col}`).value;
+                return `${stripAlias(col)} = '${val}'`;
+            }).join(', \n');
+
+            let whereClause = "";
+            if (!isJoinMode) {
+                whereClause = stripAlias(primaryFilter.rawWhere);
+            } else {
+                if (alias === primaryFilter.alias) {
+                    whereClause = `${stripAlias(primaryFilter.col)} = '${primaryFilter.val}'`;
+                } else if(joinInfo) {
+                    whereClause = `${stripAlias(joinInfo.sCol)} in (select ${stripAlias(joinInfo.pCol)} from ${tables[joinInfo.pAlias]} where ${stripAlias(primaryFilter.col)} = '${primaryFilter.val}')`;
+                }
+            }
+            finalSql += `UPDATE ${fullTableName} \nSET \n${setClause}, \nmodification_num = modification_num + 1, \nlast_upd = sysdate - 5.5/24 \nWHERE ${whereClause};\n\n`;
+        }
+        document.getElementById('output').innerText = finalSql.trim();
+    }
+
+    function copyText() {
+        const text = document.getElementById('output').innerText;
+        const btn = document.getElementById('copyBtn');
+        const feedback = document.getElementById('copyFeedback');
+        if(text.includes("UPDATE")) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.innerHTML = "✓ Copied!";
+                btn.classList.add('copy-success');
+                feedback.style.visibility = "visible";
+                setTimeout(() => {
+                    btn.innerHTML = "Copy to Clipboard";
+                    btn.classList.remove('copy-success');
+                    feedback.style.visibility = "hidden";
+                }, 2000);
+            });
+        }
+    }
+    function clearAll() { location.reload(); }
+</script>
+</body>
+</html>
