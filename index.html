@@ -2,186 +2,262 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SQL Transformer</title>
+    <title>SQL Transformer & Data Formatter</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 850px; }
-        h1 { color: #1a73e8; margin-top: 0; border-bottom: 2px solid #eef; padding-bottom: 10px; font-size: 24px; }
-        label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; margin-top: 20px; }
-        textarea { width: 100%; height: 80px; padding: 12px; border: 2px solid #dfe1e5; border-radius: 8px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 14px; outline: none; }
-        button { border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; transition: 0.2s; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 1300px; align-items: flex-start; }
+        
+        .container { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1); 
+            flex: 1; 
+            min-height: 550px; 
+            transition: flex 0.3s ease;
+        }
+
+        .header-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px; 
+            border-bottom: 2px solid #eef;
+            padding-bottom: 10px;
+        }
+
+        h1 { color: #1a73e8; margin: 0; font-size: 22px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; margin-top: 15px; }
+        
+        textarea { width: 100%; height: 120px; padding: 12px; border: 2px solid #dfe1e4; border-radius: 8px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 13px; outline: none; resize: vertical; }
+        button { border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s; }
+        
+        .toggle-btn { background-color: #e9ecef; color: #495057; font-size: 12px; padding: 5px 10px; }
+        .toggle-btn:hover { background-color: #dee2e6; }
+
         .primary-btn { background-color: #1a73e8; color: white; width: 100%; margin: 15px 0; }
         .final-btn { background-color: #f39c12; color: white; width: 100%; margin-top: 15px; }
-        .copy-btn { background-color: #28a745; color: white; width: 100%; margin-top: 10px; position: relative; }
-        .copy-success { background-color: #1557b0 !important; }
-        .clear-btn { background-color: #6c757d; color: white; padding: 6px 12px; font-size: 12px; }
-        .result-box { background: #ffffff; border: 2px solid #e1e4e8; padding: 20px; border-radius: 8px; margin-top: 5px; min-height: 50px; }
-        #output { white-space: pre-wrap; font-family: 'Consolas', monospace; color: #24292e; font-size: 14px; line-height: 1.6; }
-        .error-text { color: #d73a49 !important; font-weight: bold; }
-        #dynamicForm { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #d1d5da; margin-top: 15px; display: none; }
-        .form-group { margin-bottom: 12px; display: flex; align-items: center; }
-        .form-group label { margin: 0; width: 40%; font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; }
-        .form-group input { width: 60%; padding: 8px; border: 1px solid #ccd1d9; border-radius: 4px; }
-        #copyFeedback { text-align: center; color: #28a745; font-size: 14px; font-weight: bold; margin-top: 8px; height: 20px; visibility: hidden; }
+        
+        .formatter-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 15px 0; }
+        .format-btn { background-color: #6f42c1; color: white; font-size: 11px; padding: 12px 5px; text-align: center; }
+        .format-btn:hover { background-color: #5a32a3; }
+        
+        .copy-btn { background-color: #28a745; color: white; width: 100%; margin-top: 10px; }
+        .clear-btn { background-color: #6c757d; color: white; padding: 6px 12px; font-size: 11px; margin-right: 5px; }
+        .result-box { background: #fdfdfd; border: 2px solid #e1e4e8; padding: 15px; border-radius: 8px; margin-top: 5px; min-height: 40px; }
+        #output, #formatterOutput { white-space: pre-wrap; font-family: 'Consolas', monospace; color: #24292e; font-size: 13px; line-height: 1.5; overflow-wrap: break-word; }
+        
+        #dynamicForm { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #d1d5da; margin-top: 15px; display: none; }
+        .form-group { margin-bottom: 10px; display: flex; align-items: center; }
+        .form-group label { margin: 0; width: 40%; font-size: 12px; color: #333; }
+        .form-group input { width: 60%; padding: 6px; border: 1px solid #ccd1d9; border-radius: 4px; }
+        
+        .collapsible-content { display: block; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h1>SQL Transformer</h1>
-        <button class="clear-btn" onclick="clearAll()">Clear All</button>
-    </div>
-    <label>1. Input SELECT Statement:</label>
-    <textarea id="inputSql" placeholder="Example: select a.ad from siebel.abc a where a.id = 'qw';"></textarea>
-    <button class="primary-btn" onclick="prepareForm()">Prepare Update Values</button>
+<div class="main-wrapper">
+    <div class="container" id="sqlContainer">
+        <div class="header-row">
+            <h1>SQL Transformer <small style="font-size: 12px; font-weight: normal; color: #666;">v52</small></h1>
+            <div>
+                <button class="clear-btn" onclick="clearAll()">Clear All</button>
+                <button class="toggle-btn" onclick="toggleSection('sqlContent', this)">Collapse</button>
+            </div>
+        </div>
+        
+        <div id="sqlContent" class="collapsible-content">
+            <label>Input SELECT Statement:</label>
+            <textarea id="inputSql" placeholder="SELECT COLUMN1, COLUMN2&#10;FROM TABLE&#10;WHERE ID = 'IDENTIFIER_VALUE';"></textarea>
+            <button class="primary-btn" onclick="prepareForm()">Prepare Update Values</button>
 
-    <div id="dynamicForm">
-        <label style="margin-top:0">2. Enter Values to Update:</label>
-        <div id="inputsContainer" style="margin-top:10px;"></div>
-        <button class="final-btn" onclick="generateFinalSql()">Generate Final Statement</button>
+            <div id="dynamicForm">
+                <label style="margin-top:0">Enter Values to Update:</label>
+                <div id="inputsContainer" style="margin-top:10px;"></div>
+                <button class="final-btn" onclick="generateFinalSql()">Generate Final Statement</button>
+            </div>
+            
+            <label>Resulting UPDATE Statement:</label>
+            <div class="result-box"><div id="output">Waiting for valid input...</div></div>
+            <button id="copyBtn" class="copy-btn" onclick="copyText('output', 'copyBtn')">Copy Statement</button>
+        </div>
     </div>
-    
-    <label>Resulting UPDATE Statement:</label>
-    <div class="result-box"><div id="output">Waiting...</div></div>
-    <button id="copyBtn" class="copy-btn" onclick="copyText()">Copy to Clipboard</button>
-    <div id="copyFeedback">✓ Copied to clipboard!</div>
+
+    <div class="container" id="formatterContainer">
+        <div class="header-row">
+            <h1>Data Formatter</h1>
+            <button class="toggle-btn" onclick="toggleSection('formatterContent', this)">Collapse</button>
+        </div>
+
+        <div id="formatterContent" class="collapsible-content">
+            <label>Input Raw Data (List or CSV):</label>
+            <textarea id="formatterInput" placeholder="1&#10;2&#10;3&#10;-- OR --&#10;1, 2, 3"></textarea>
+            
+            <div class="formatter-btn-group">
+                <button class="format-btn" onclick="transformData('plain_comma')">To 1, 2, 3</button>
+                <button class="format-btn" onclick="transformData('plain_or')">To 1 OR 2 OR 3</button>
+                <button class="format-btn" onclick="transformData('plain_and')">To 1 AND 2 AND 3</button>
+                
+                <button class="format-btn" onclick="transformData('quoted_comma')">To '1', '2', '3'</button>
+                <button class="format-btn" onclick="transformData('quoted_or')">To '1' OR '2' OR '3'</button>
+                <button class="format-btn" onclick="transformData('quoted_and')">To '1' AND '2' AND '3'</button>
+            </div>
+
+            <label>Resulting Format:</label>
+            <div class="result-box"><div id="formatterOutput">Waiting for input...</div></div>
+            <button id="copyBtnFormatter" class="copy-btn" onclick="copyText('formatterOutput', 'copyBtnFormatter')">Copy Formatted Data</button>
+        </div>
+    </div>
 </div>
 
 <script>
+    function toggleSection(id, btn) {
+        const content = document.getElementById(id);
+        const container = content.parentElement;
+        if (content.style.display === "none") {
+            content.style.display = "block";
+            btn.innerHTML = "Collapse";
+            container.style.minHeight = "550px";
+            container.style.flex = "1";
+        } else {
+            content.style.display = "none";
+            btn.innerHTML = "Expand";
+            container.style.minHeight = "auto";
+            container.style.flex = "0 1 auto";
+        }
+    }
+
     let currentColumns = [];
     let tables = {}; 
-    let joinInfo = null;
+    let joinChain = [];
     let primaryFilter = null;
     let isJoinMode = false;
 
-    function stripAlias(str) {
-        if (!str) return "";
-        return str.includes('.') ? str.split('.').pop() : str;
+    function stripAlias(str) { return str.includes('.') ? str.split('.').pop().trim() : str; }
+
+    function validateSyntax(sql) {
+        const lowerSql = sql.toLowerCase().trim().replace(/\s+/g, ' ');
+        if (!lowerSql.includes("select") || !lowerSql.includes("from") || !lowerSql.includes("where")) return "Missing keywords.";
+        return null;
     }
 
     function prepareForm() {
-        const input = document.getElementById('inputSql').value.trim().replace(/\s+/g, ' ');
+        const inputRaw = document.getElementById('inputSql').value;
         const outputDiv = document.getElementById('output');
         const formDiv = document.getElementById('dynamicForm');
         const container = document.getElementById('inputsContainer');
         
+        if (validateSyntax(inputRaw)) {
+            outputDiv.innerHTML = "<span style='color:red'>❌ Syntax Error</span>";
+            return;
+        }
+
         container.innerHTML = "";
-        formDiv.style.display = "none";
-        tables = {}; joinInfo = null; primaryFilter = null;
-
-        const colMatch = input.match(/select\s+(.*?)\s+from/i);
-        const whereMatch = input.match(/where\s+(.*)/i);
-        if (!colMatch || !whereMatch) {
-            outputDiv.innerHTML = "<span class='error-text'>❌ ERROR: Invalid Statement.</span>";
-            return;
-        }
-
-        const rawColumnsPart = colMatch[1].trim();
-        if (rawColumnsPart.includes("*")) {
-            outputDiv.innerHTML = "<span class='error-text'>❌ ERROR: 'SELECT *' detected.</span>";
-            return;
-        }
-
-        const fromPartMatch = input.match(/from\s+(.*?)\s+where/i);
-        const tablePart = fromPartMatch[1];
-        const tableRegex = /([\w\.]+)\s+([\w]+)/g;
-        let tMatch;
-        while ((tMatch = tableRegex.exec(tablePart)) !== null) {
-            const fullTableName = tMatch[1];
-            const alias = tMatch[2];
-            if(!['inner','join','on','left','right'].includes(fullTableName.toLowerCase())) {
-                tables[alias] = fullTableName; // Store the FULL name (siebel.abc)
-            }
-        }
-
-        isJoinMode = Object.keys(tables).length > 1;
-        currentColumns = rawColumnsPart.split(',').map(c => c.trim());
-
-        if (isJoinMode) {
-            const joinRegex = /([\w]+)\.([\w]+)\s*=\s*([\w]+)\.([\w]+)/;
-            const filterRegex = /([\w]+)\.([\w]+)\s*=\s*'([^']+)'/;
+        tables = {}; 
+        const normSql = inputRaw.replace(/\s+/g, ' ');
+        
+        try {
+            const colPart = normSql.match(/select\s+(.*?)\s+from/i)[1].trim();
+            const tablePartString = normSql.match(/from\s+(.*?)\s+where/i)[1].trim();
+            const rawWhere = normSql.match(/where\s+(.*)/i)[1].replace(/;+$/, '').trim();
             
-            const jMatch = input.match(joinRegex);
-            const fMatch = input.match(filterRegex);
+            const tableEntries = tablePartString.split(/(?:left|right|inner)?\s+join/i);
+            tableEntries.forEach(entry => {
+                const cleanEntry = entry.split(/\s+on\s+/i)[0].trim();
+                const parts = cleanEntry.split(/\s+/);
+                const aName = parts.length > 1 ? parts[parts.length-1].toLowerCase() : 'single';
+                tables[aName] = parts[0];
+            });
 
-            if (jMatch && fMatch) {
-                primaryFilter = { alias: fMatch[1], col: fMatch[2], val: fMatch[3] };
-                if (jMatch[1] === primaryFilter.alias) {
-                    joinInfo = { pAlias: jMatch[1], pCol: jMatch[2], sAlias: jMatch[3], sCol: jMatch[4] };
-                } else {
-                    joinInfo = { pAlias: jMatch[3], pCol: jMatch[4], sAlias: jMatch[1], sCol: jMatch[2] };
-                }
+            isJoinMode = Object.keys(tables).length > 1;
+            currentColumns = colPart.split(',').map(c => c.trim());
+
+            const fMatch = rawWhere.match(/([\w\.]+)\s+(=|in|like|[<>!]+)\s*(\(.*\)|'[^']+'|\d+)/i);
+            if (isJoinMode && fMatch) {
+                const alias = fMatch[1].includes('.') ? fMatch[1].split('.')[0].toLowerCase() : Object.keys(tables)[0];
+                primaryFilter = { alias: alias, col: stripAlias(fMatch[1]), op: fMatch[2], val: fMatch[3] };
+            } else {
+                primaryFilter = { rawWhere: rawWhere, alias: Object.keys(tables)[0] };
             }
-        } else {
-            const singleTableMatch = input.match(/from\s+([\w\.]+)/i);
-            const foundTable = singleTableMatch ? singleTableMatch[1] : 's_order';
-            const aliasMatch = input.match(/from\s+[\w\.]+\s+([\w]+)/i);
-            const foundAlias = aliasMatch ? aliasMatch[1] : 'SINGLE';
-            tables[foundAlias] = foundTable;
-            primaryFilter = { rawWhere: whereMatch[1].replace(';', '').trim() };
+
+            currentColumns.forEach(col => {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.innerHTML = `<label>${col}:</label><input type="text" id="val_${col}">`;
+                container.appendChild(div);
+            });
+
+            formDiv.style.display = "block";
+            outputDiv.innerText = "Syntax Validated.";
+        } catch (e) {
+            outputDiv.innerHTML = "<span style='color:red'>❌ Error parsing statement.</span>";
         }
-
-        currentColumns.forEach(col => {
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            div.innerHTML = `<label>${col}:</label><input type="text" id="val_${col}" placeholder="Value">`;
-            container.appendChild(div);
-        });
-
-        formDiv.style.display = "block";
-        outputDiv.innerText = "Form ready.";
     }
 
     function generateFinalSql() {
         let finalSql = "";
         const grouped = {};
-
         currentColumns.forEach(col => {
-            const alias = col.includes('.') ? col.split('.')[0] : Object.keys(tables)[0];
+            const alias = col.includes('.') ? col.split('.')[0].toLowerCase() : Object.keys(tables)[0];
             if (!grouped[alias]) grouped[alias] = [];
             grouped[alias].push(col);
         });
 
         for (const alias in grouped) {
-            const fullTableName = tables[alias];
+            const fullTableName = tables[alias] || Object.values(tables)[0];
             const setClause = grouped[alias].map(col => {
-                const val = document.getElementById(`val_${col}`).value;
+                const val = document.getElementById(`val_${col}`).value.trim();
+                if (val.toLowerCase().includes("sysdate")) return `${stripAlias(col)} = ${val}`;
                 return `${stripAlias(col)} = '${val}'`;
             }).join(', \n');
 
-            let whereClause = "";
-            if (!isJoinMode) {
-                whereClause = stripAlias(primaryFilter.rawWhere);
-            } else {
-                if (alias === primaryFilter.alias) {
-                    whereClause = `${stripAlias(primaryFilter.col)} = '${primaryFilter.val}'`;
-                } else if(joinInfo) {
-                    whereClause = `${stripAlias(joinInfo.sCol)} in (select ${stripAlias(joinInfo.pCol)} from ${tables[joinInfo.pAlias]} where ${stripAlias(primaryFilter.col)} = '${primaryFilter.val}')`;
-                }
+            let whereClause = isJoinMode ? "" : (primaryFilter.rawWhere || "");
+            if (isJoinMode && alias !== primaryFilter.alias) {
+                whereClause = "/* Check Join Condition */"; 
+            } else if (isJoinMode) {
+                whereClause = `${primaryFilter.col} ${primaryFilter.op} ${primaryFilter.val}`;
             }
             finalSql += `UPDATE ${fullTableName} \nSET \n${setClause}, \nmodification_num = modification_num + 1, \nlast_upd = sysdate - 5.5/24 \nWHERE ${whereClause};\n\n`;
         }
         document.getElementById('output').innerText = finalSql.trim();
     }
 
-    function copyText() {
-        const text = document.getElementById('output').innerText;
-        const btn = document.getElementById('copyBtn');
-        const feedback = document.getElementById('copyFeedback');
-        if(text.includes("UPDATE")) {
-            navigator.clipboard.writeText(text).then(() => {
-                btn.innerHTML = "✓ Copied!";
-                btn.classList.add('copy-success');
-                feedback.style.visibility = "visible";
-                setTimeout(() => {
-                    btn.innerHTML = "Copy to Clipboard";
-                    btn.classList.remove('copy-success');
-                    feedback.style.visibility = "hidden";
-                }, 2000);
-            });
+    function transformData(mode) {
+        const input = document.getElementById('formatterInput').value.trim();
+        if (!input) return;
+        
+        // --- UPDATED LOGIC ---
+        // Split by lines, commas, or spaces
+        // Then filter out empty strings, dashes, and explicitly ignore "OR" and "AND" (case-insensitive)
+        const items = input.split(/[\n,\s]+/).map(item => item.trim()).filter(i => {
+            const lower = i.toLowerCase();
+            return i.length > 0 && i !== "--" && lower !== "or" && lower !== "and";
+        });
+        
+        let result = "";
+        switch(mode) {
+            case 'plain_comma': result = items.join(', '); break;
+            case 'plain_or':    result = items.join(' OR '); break;
+            case 'plain_and':   result = items.join(' AND '); break;
+            case 'quoted_comma': result = items.map(i => `'${i}'`).join(', '); break;
+            case 'quoted_or':    result = items.map(i => `'${i}'`).join(' OR '); break;
+            case 'quoted_and':   result = items.map(i => `'${i}'`).join(' AND '); break;
         }
+        
+        document.getElementById('formatterOutput').innerText = result;
     }
+
+    function copyText(elemId, btnId) {
+        const text = document.getElementById(elemId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById(btnId);
+            const old = btn.innerHTML;
+            btn.innerHTML = "✓ Copied!";
+            setTimeout(() => btn.innerHTML = old, 2000);
+        });
+    }
+
     function clearAll() { location.reload(); }
 </script>
 </body>
