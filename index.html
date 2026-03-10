@@ -2,72 +2,125 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SQL Transformer & Data Formatter</title>
+    <title>SQL Tool Suite v52</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .main-wrapper { display: flex; gap: 20px; width: 100%; max-width: 1300px; align-items: flex-start; }
-        
-        .container { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1); 
-            flex: 1; 
-            min-height: 550px; 
-            transition: flex 0.3s ease;
+        :root {
+            --sidebar-width: 240px;
+            --primary-color: #1a73e8;
+            --bg-color: #f0f2f5;
         }
 
-        .header-row { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 15px; 
-            border-bottom: 2px solid #eef;
-            padding-bottom: 10px;
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg-color); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- Sidebar Navigation --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #ffffff;
+            border-right: 1px solid #dfe1e4;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            z-index: 10;
         }
 
-        h1 { color: #1a73e8; margin: 0; font-size: 22px; }
-        label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; margin-top: 15px; }
-        
-        textarea { width: 100%; height: 120px; padding: 12px; border: 2px solid #dfe1e4; border-radius: 8px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 13px; outline: none; resize: vertical; }
-        button { border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s; }
-        
-        .toggle-btn { background-color: #e9ecef; color: #495057; font-size: 12px; padding: 5px 10px; }
-        .toggle-btn:hover { background-color: #dee2e6; }
+        .sidebar-header {
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
 
-        .primary-btn { background-color: #1a73e8; color: white; width: 100%; margin: 15px 0; }
+        .sidebar-header h2 {
+            font-size: 18px;
+            color: var(--primary-color);
+            margin: 0;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #5f6368;
+            transition: 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-item:hover { background-color: #f8f9fa; color: var(--primary-color); }
+
+        .menu-item.active {
+            background-color: #e8f0fe;
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        /* --- Main Content Area --- */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        .view-section {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Shared Tool Styles --- */
+        h1 { color: var(--primary-color); margin-top: 0; border-bottom: 2px solid #eef; padding-bottom: 10px; font-size: 24px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; margin-top: 20px; }
+        textarea { width: 100%; height: 140px; padding: 12px; border: 2px solid #dfe1e4; border-radius: 8px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 14px; outline: none; resize: vertical; }
+        button { border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s; }
+
+        .primary-btn { background-color: var(--primary-color); color: white; width: 100%; margin: 15px 0; }
         .final-btn { background-color: #f39c12; color: white; width: 100%; margin-top: 15px; }
-        
-        .formatter-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 15px 0; }
-        .format-btn { background-color: #6f42c1; color: white; font-size: 11px; padding: 12px 5px; text-align: center; }
-        .format-btn:hover { background-color: #5a32a3; }
-        
         .copy-btn { background-color: #28a745; color: white; width: 100%; margin-top: 10px; }
-        .clear-btn { background-color: #6c757d; color: white; padding: 6px 12px; font-size: 11px; margin-right: 5px; }
-        .result-box { background: #fdfdfd; border: 2px solid #e1e4e8; padding: 15px; border-radius: 8px; margin-top: 5px; min-height: 40px; }
-        #output, #formatterOutput { white-space: pre-wrap; font-family: 'Consolas', monospace; color: #24292e; font-size: 13px; line-height: 1.5; overflow-wrap: break-word; }
-        
-        #dynamicForm { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #d1d5da; margin-top: 15px; display: none; }
-        .form-group { margin-bottom: 10px; display: flex; align-items: center; }
-        .form-group label { margin: 0; width: 40%; font-size: 12px; color: #333; }
-        .form-group input { width: 60%; padding: 6px; border: 1px solid #ccd1d9; border-radius: 4px; }
-        
-        .collapsible-content { display: block; }
+        .clear-btn { background-color: #6c757d; color: white; padding: 6px 12px; font-size: 12px; }
+
+        .formatter-btn-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+        .format-btn { background-color: #6f42c1; color: white; }
+        .format-btn:hover { background-color: #5a32a3; }
+
+        .result-box { background: #fdfdfd; border: 2px solid #e1e4e8; padding: 20px; border-radius: 8px; margin-top: 5px; min-height: 50px; }
+        #output, #formatterOutput { white-space: pre-wrap; font-family: 'Consolas', monospace; color: #24292e; font-size: 14px; line-height: 1.6; }
+
+        #dynamicForm { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #d1d5da; margin-top: 15px; display: none; }
+        .form-group { margin-bottom: 12px; display: flex; align-items: center; }
+        .form-group label { margin: 0; width: 40%; font-size: 13px; color: #333; }
+        .form-group input { width: 60%; padding: 8px; border: 1px solid #ccd1d9; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div class="main-wrapper">
-    <div class="container" id="sqlContainer">
-        <div class="header-row">
-            <h1>SQL Transformer <small style="font-size: 12px; font-weight: normal; color: #666;">v52</small></h1>
-            <div>
-                <button class="clear-btn" onclick="clearAll()">Clear All</button>
-                <button class="toggle-btn" onclick="toggleSection('sqlContent', this)">Collapse</button>
-            </div>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>SQL Tool Suite</h2>
         </div>
+        <div class="menu-item active" onclick="switchTab('sqlTab', this)">SQL Transformer</div>
+        <div class="menu-item" onclick="switchTab('formatterTab', this)">Data Formatter</div>
+        <div style="margin-top: auto; padding: 20px;">
+            <button class="clear-btn" style="width: 100%" onclick="location.reload()">Reset All</button>
+        </div>
+    </div>
+
+    <div class="main-content">
         
-        <div id="sqlContent" class="collapsible-content">
+        <div id="sqlTab" class="view-section active">
+            <h1>SQL Transformer <small style="font-size: 12px; font-weight: normal; color: #666;">v52</small></h1>
             <label>Input SELECT Statement:</label>
             <textarea id="inputSql" placeholder="SELECT COLUMN1, COLUMN2&#10;FROM TABLE&#10;WHERE ID = 'IDENTIFIER_VALUE';"></textarea>
             <button class="primary-btn" onclick="prepareForm()">Prepare Update Values</button>
@@ -82,15 +135,9 @@
             <div class="result-box"><div id="output">Waiting for valid input...</div></div>
             <button id="copyBtn" class="copy-btn" onclick="copyText('output', 'copyBtn')">Copy Statement</button>
         </div>
-    </div>
 
-    <div class="container" id="formatterContainer">
-        <div class="header-row">
+        <div id="formatterTab" class="view-section">
             <h1>Data Formatter</h1>
-            <button class="toggle-btn" onclick="toggleSection('formatterContent', this)">Collapse</button>
-        </div>
-
-        <div id="formatterContent" class="collapsible-content">
             <label>Input Raw Data (List or CSV):</label>
             <textarea id="formatterInput" placeholder="1&#10;2&#10;3&#10;-- OR --&#10;1, 2, 3"></textarea>
             
@@ -108,39 +155,26 @@
             <div class="result-box"><div id="formatterOutput">Waiting for input...</div></div>
             <button id="copyBtnFormatter" class="copy-btn" onclick="copyText('formatterOutput', 'copyBtnFormatter')">Copy Formatted Data</button>
         </div>
+
     </div>
-</div>
 
 <script>
-    function toggleSection(id, btn) {
-        const content = document.getElementById(id);
-        const container = content.parentElement;
-        if (content.style.display === "none") {
-            content.style.display = "block";
-            btn.innerHTML = "Collapse";
-            container.style.minHeight = "550px";
-            container.style.flex = "1";
-        } else {
-            content.style.display = "none";
-            btn.innerHTML = "Expand";
-            container.style.minHeight = "auto";
-            container.style.flex = "0 1 auto";
-        }
+    /* TAB LOGIC */
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        element.classList.add('active');
     }
 
+    /* SQL TRANSFORMER LOGIC */
     let currentColumns = [];
     let tables = {}; 
-    let joinChain = [];
     let primaryFilter = null;
     let isJoinMode = false;
 
     function stripAlias(str) { return str.includes('.') ? str.split('.').pop().trim() : str; }
-
-    function validateSyntax(sql) {
-        const lowerSql = sql.toLowerCase().trim().replace(/\s+/g, ' ');
-        if (!lowerSql.includes("select") || !lowerSql.includes("from") || !lowerSql.includes("where")) return "Missing keywords.";
-        return null;
-    }
 
     function prepareForm() {
         const inputRaw = document.getElementById('inputSql').value;
@@ -148,13 +182,12 @@
         const formDiv = document.getElementById('dynamicForm');
         const container = document.getElementById('inputsContainer');
         
-        if (validateSyntax(inputRaw)) {
-            outputDiv.innerHTML = "<span style='color:red'>❌ Syntax Error</span>";
+        if (!inputRaw.toLowerCase().includes("select") || !inputRaw.toLowerCase().includes("from")) {
+            outputDiv.innerHTML = "<span style='color:red'>❌ Invalid SELECT statement format.</span>";
             return;
         }
 
         container.innerHTML = "";
-        tables = {}; 
         const normSql = inputRaw.replace(/\s+/g, ' ');
         
         try {
@@ -162,25 +195,12 @@
             const tablePartString = normSql.match(/from\s+(.*?)\s+where/i)[1].trim();
             const rawWhere = normSql.match(/where\s+(.*)/i)[1].replace(/;+$/, '').trim();
             
-            const tableEntries = tablePartString.split(/(?:left|right|inner)?\s+join/i);
-            tableEntries.forEach(entry => {
-                const cleanEntry = entry.split(/\s+on\s+/i)[0].trim();
-                const parts = cleanEntry.split(/\s+/);
-                const aName = parts.length > 1 ? parts[parts.length-1].toLowerCase() : 'single';
-                tables[aName] = parts[0];
-            });
+            const parts = tablePartString.split(/\s+/);
+            const aName = parts.length > 1 ? parts[parts.length-1].toLowerCase() : 'single';
+            tables[aName] = parts[0];
+            primaryFilter = { rawWhere: rawWhere, alias: aName };
 
-            isJoinMode = Object.keys(tables).length > 1;
             currentColumns = colPart.split(',').map(c => c.trim());
-
-            const fMatch = rawWhere.match(/([\w\.]+)\s+(=|in|like|[<>!]+)\s*(\(.*\)|'[^']+'|\d+)/i);
-            if (isJoinMode && fMatch) {
-                const alias = fMatch[1].includes('.') ? fMatch[1].split('.')[0].toLowerCase() : Object.keys(tables)[0];
-                primaryFilter = { alias: alias, col: stripAlias(fMatch[1]), op: fMatch[2], val: fMatch[3] };
-            } else {
-                primaryFilter = { rawWhere: rawWhere, alias: Object.keys(tables)[0] };
-            }
-
             currentColumns.forEach(col => {
                 const div = document.createElement('div');
                 div.className = 'form-group';
@@ -191,45 +211,30 @@
             formDiv.style.display = "block";
             outputDiv.innerText = "Syntax Validated.";
         } catch (e) {
-            outputDiv.innerHTML = "<span style='color:red'>❌ Error parsing statement.</span>";
+            outputDiv.innerHTML = "<span style='color:red'>❌ Error parsing statement. Ensure standard SELECT...FROM...WHERE format.</span>";
         }
     }
 
     function generateFinalSql() {
         let finalSql = "";
-        const grouped = {};
-        currentColumns.forEach(col => {
-            const alias = col.includes('.') ? col.split('.')[0].toLowerCase() : Object.keys(tables)[0];
-            if (!grouped[alias]) grouped[alias] = [];
-            grouped[alias].push(col);
-        });
+        const fullTableName = Object.values(tables)[0];
+        
+        const setClause = currentColumns.map(col => {
+            const val = document.getElementById(`val_${col}`).value.trim();
+            if (val.toLowerCase().includes("sysdate")) return `${stripAlias(col)} = ${val}`;
+            return `${stripAlias(col)} = '${val}'`;
+        }).join(', \n');
 
-        for (const alias in grouped) {
-            const fullTableName = tables[alias] || Object.values(tables)[0];
-            const setClause = grouped[alias].map(col => {
-                const val = document.getElementById(`val_${col}`).value.trim();
-                if (val.toLowerCase().includes("sysdate")) return `${stripAlias(col)} = ${val}`;
-                return `${stripAlias(col)} = '${val}'`;
-            }).join(', \n');
-
-            let whereClause = isJoinMode ? "" : (primaryFilter.rawWhere || "");
-            if (isJoinMode && alias !== primaryFilter.alias) {
-                whereClause = "/* Check Join Condition */"; 
-            } else if (isJoinMode) {
-                whereClause = `${primaryFilter.col} ${primaryFilter.op} ${primaryFilter.val}`;
-            }
-            finalSql += `UPDATE ${fullTableName} \nSET \n${setClause}, \nmodification_num = modification_num + 1, \nlast_upd = sysdate - 5.5/24 \nWHERE ${whereClause};\n\n`;
-        }
-        document.getElementById('output').innerText = finalSql.trim();
+        finalSql = `UPDATE ${fullTableName} \nSET \n${setClause}, \nmodification_num = modification_num + 1, \nlast_upd = sysdate - 5.5/24 \nWHERE ${primaryFilter.rawWhere};`;
+        document.getElementById('output').innerText = finalSql;
     }
 
+    /* DATA FORMATTER LOGIC */
     function transformData(mode) {
         const input = document.getElementById('formatterInput').value.trim();
         if (!input) return;
         
-        // --- UPDATED LOGIC ---
-        // Split by lines, commas, or spaces
-        // Then filter out empty strings, dashes, and explicitly ignore "OR" and "AND" (case-insensitive)
+        // Ignore "OR" and "AND" strings in input
         const items = input.split(/[\n,\s]+/).map(item => item.trim()).filter(i => {
             const lower = i.toLowerCase();
             return i.length > 0 && i !== "--" && lower !== "or" && lower !== "and";
@@ -244,10 +249,10 @@
             case 'quoted_or':    result = items.map(i => `'${i}'`).join(' OR '); break;
             case 'quoted_and':   result = items.map(i => `'${i}'`).join(' AND '); break;
         }
-        
         document.getElementById('formatterOutput').innerText = result;
     }
 
+    /* UTILITIES */
     function copyText(elemId, btnId) {
         const text = document.getElementById(elemId).innerText;
         navigator.clipboard.writeText(text).then(() => {
@@ -257,8 +262,6 @@
             setTimeout(() => btn.innerHTML = old, 2000);
         });
     }
-
-    function clearAll() { location.reload(); }
 </script>
 </body>
 </html>
