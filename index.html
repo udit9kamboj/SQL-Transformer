@@ -102,6 +102,18 @@
         .form-group { margin-bottom: 12px; display: flex; align-items: center; }
         .form-group label { margin: 0; width: 40%; font-size: 13px; color: #333; }
         .form-group input { width: 60%; padding: 8px; border: 1px solid #ccd1d9; border-radius: 4px; }
+
+        /* User Note Style */
+        .user-note {
+            background-color: #fff9db;
+            border-left: 4px solid #fcc419;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+        .user-note b { color: #444; }
     </style>
 </head>
 <body>
@@ -139,7 +151,13 @@
         <div id="formatterTab" class="view-section">
             <h1>Data Formatter</h1>
             <label>Input Raw Data (List or CSV):</label>
-            <textarea id="formatterInput" placeholder="1&#10;2&#10;3&#10;-- OR --&#10;1, 2, 3"></textarea>
+            <textarea id="formatterInput" placeholder="Enter data here..."></textarea>
+            
+            <div class="user-note">
+                <b>💡 Input Logic:</b><br>
+                • <b>Vertical Data:</b> If data contains multiple lines, each <u>entire line</u> is treated as one entity (spaces are preserved).<br>
+                • <b>Horizontal Data:</b> If data is on a single line, entities are separated by <u>spaces or commas</u>.
+            </div>
             
             <div class="formatter-btn-group">
                 <button class="format-btn" onclick="transformData('plain_comma')">To 1, 2, 3</button>
@@ -172,7 +190,6 @@
     let currentColumns = [];
     let tables = {}; 
     let primaryFilter = null;
-    let isJoinMode = false;
 
     function stripAlias(str) { return str.includes('.') ? str.split('.').pop().trim() : str; }
 
@@ -211,7 +228,7 @@
             formDiv.style.display = "block";
             outputDiv.innerText = "Syntax Validated.";
         } catch (e) {
-            outputDiv.innerHTML = "<span style='color:red'>❌ Error parsing statement. Ensure standard SELECT...FROM...WHERE format.</span>";
+            outputDiv.innerHTML = "<span style='color:red'>❌ Error parsing statement.</span>";
         }
     }
 
@@ -234,11 +251,19 @@
         const input = document.getElementById('formatterInput').value.trim();
         if (!input) return;
         
-        // Ignore "OR" and "AND" strings in input
-        const items = input.split(/[\n,\s]+/).map(item => item.trim()).filter(i => {
-            const lower = i.toLowerCase();
-            return i.length > 0 && i !== "--" && lower !== "or" && lower !== "and";
-        });
+        let items = [];
+        
+        if (input.indexOf('\n') !== -1) {
+            items = input.split('\n').map(line => line.trim()).filter(i => {
+                const lower = i.toLowerCase();
+                return i.length > 0 && i !== "--" && lower !== "or" && lower !== "and";
+            });
+        } else {
+            items = input.split(/[\n,\s]+/).map(item => item.trim()).filter(i => {
+                const lower = i.toLowerCase();
+                return i.length > 0 && i !== "--" && lower !== "or" && lower !== "and";
+            });
+        }
         
         let result = "";
         switch(mode) {
